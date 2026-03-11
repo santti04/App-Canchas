@@ -3,3 +3,16 @@ hay que poner que las canchas nuevas se registran con 0 calificaciones, 0 estrel
 hya que poner que el precio sea uno solo, no un rango estimativo
 hay que corregir la funcionalidad del teclado al dejar una reseña;
 optimizar el funcionamiento general
+categorizar canchas por dueño, por ejemplo los complejos loyal tienen categoria loyal;
+poner categoria a los admin, para que solo puedan modificar y crear canchas de su categoria;
+añadir sistema de turnos, con muestra de  dias y horarios disponibles;
+agregar seccion social, para compartir canchas, fotos, videos, etc. con likes y comentarios;
+activar funcionalidad de poner favoritos;
+politicas de cancelacion;
+pagos online;
+notificaciones push;
+cuando se confirma el turno, sugerir agregarlo al calendario;
+permitir filtrar por cadena de complejos de canchas (ej: loyal, etc);
+permitir crear un equipo (grupo de jugadores), con posibilidad de invitar jugadores, y ponerse una imagen y breve descripcion. que dentro del grupo el creador sea administrador del grupo, y pueda agregar o eliminar jugadores, y7 modificar los permisos de cada integrante;
+agregar la posibilidad de editar el perfil, agregar foto de perfil, breve descripcion opcional;
+considerar opcion de sacar turnos por equipo, es decir, que un equipo se anote al turno, y hasta que no haya otro equipo rival que se anote, no se confirme el turno;
