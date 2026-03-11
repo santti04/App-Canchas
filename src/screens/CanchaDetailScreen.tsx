@@ -5,6 +5,7 @@ import {
     StyleSheet,
     ScrollView,
     TouchableOpacity,
+    TouchableWithoutFeedback,
     Linking,
     Alert,
     Platform,
@@ -12,7 +13,9 @@ import {
     Image,
     Modal,
     TextInput,
-    ActivityIndicator
+    ActivityIndicator,
+    Keyboard,
+    KeyboardAvoidingView
 } from 'react-native';
 import ExpoMapView, { Marker, PROVIDER_DEFAULT } from '../components/ExpoMapView';
 import { Ionicons, MaterialIcons } from '@expo/vector-icons';
@@ -439,38 +442,51 @@ export default function CanchaDetailScreen({ navigation, route }: Props) {
                 transparent
                 visible={isReviewModalVisible}
                 animationType="fade"
-                onRequestClose={() => setIsReviewModalVisible(false)}
+                onRequestClose={() => {
+                    Keyboard.dismiss();
+                    setIsReviewModalVisible(false);
+                }}
             >
-                <View style={styles.modalOverlay}>
-                    <View style={styles.modalContent}>
-                        <View style={styles.modalHeader}>
-                            <Text style={styles.modalTitle}>Calificá tu experiencia</Text>
-                            <TouchableOpacity onPress={() => setIsReviewModalVisible(false)}>
-                                <Ionicons name="close" size={24} color={colors.textSecondary} />
-                            </TouchableOpacity>
-                        </View>
+                <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+                    <View style={styles.modalOverlay}>
+                        <KeyboardAvoidingView
+                            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+                            style={styles.keyboardAvoidingView}
+                        >
+                            <TouchableWithoutFeedback onPress={() => {}}>
+                                <View style={styles.modalContent}>
+                                    <View style={styles.modalHeader}>
+                                        <Text style={styles.modalTitle}>Calificá tu experiencia</Text>
+                                        <TouchableOpacity onPress={() => {
+                                            Keyboard.dismiss();
+                                            setIsReviewModalVisible(false);
+                                        }}>
+                                            <Ionicons name="close" size={24} color={colors.textSecondary} />
+                                        </TouchableOpacity>
+                                    </View>
+
+                                    <View style={styles.modalStarsWrap}>
+                                        <RatingStars
+                                            rating={ratingVal}
+                                            size={40}
+                                            readonly={false}
+                                            onRatingChange={setRatingVal}
+                                        />
+                                        <Text style={styles.modalRatingText}>{ratingVal.toFixed(1)} / 5.0</Text>
+                                    </View>
+
+                                    <TextInput
+                                        style={styles.modalInput}
+                                        placeholder="Escribí un breve comentario sobre la cancha... (Opcional)"
+                                        placeholderTextColor={colors.textMuted}
+                                        value={reviewText}
+                                        onChangeText={setReviewText}
+                                        multiline
+                                        blurOnSubmit={false}
+                                    />
                         
-                        <View style={styles.modalStarsWrap}>
-                            <RatingStars 
-                                rating={ratingVal} 
-                                size={40} 
-                                readonly={false} 
-                                onRatingChange={setRatingVal} 
-                            />
-                            <Text style={styles.modalRatingText}>{ratingVal.toFixed(1)} / 5.0</Text>
-                        </View>
-                        
-                        <TextInput
-                            style={styles.modalInput}
-                            placeholder="Escribí un breve comentario sobre la cancha... (Opcional)"
-                            placeholderTextColor={colors.textMuted}
-                            value={reviewText}
-                            onChangeText={setReviewText}
-                            multiline
-                        />
-                        
-                        <TouchableOpacity 
-                            style={styles.modalSubmitBtn} 
+                        <TouchableOpacity
+                            style={styles.modalSubmitBtn}
                             onPress={submitReview}
                             disabled={submittingReview}
                         >
@@ -480,8 +496,11 @@ export default function CanchaDetailScreen({ navigation, route }: Props) {
                                 <Text style={styles.modalSubmitBtnText}>Guardar Reseña</Text>
                             )}
                         </TouchableOpacity>
+                                </View>
+                            </TouchableWithoutFeedback>
+                        </KeyboardAvoidingView>
                     </View>
-                </View>
+                </TouchableWithoutFeedback>
             </Modal>
         </SafeAreaView>
     );
@@ -862,6 +881,9 @@ const styles = StyleSheet.create({
         flex: 1,
         backgroundColor: 'rgba(0,0,0,0.5)',
         justifyContent: 'flex-end',
+    },
+    keyboardAvoidingView: {
+        width: '100%',
     },
     modalContent: {
         backgroundColor: colors.surface,
