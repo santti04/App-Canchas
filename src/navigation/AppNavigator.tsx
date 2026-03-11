@@ -6,10 +6,14 @@ import HomeScreen from '../screens/HomeScreen';
 import SearchScreen from '../screens/SearchScreen';
 import FavoritosScreen from '../screens/FavoritosScreen';
 import CanchaDetailScreen from '../screens/CanchaDetailScreen';
+import AuthScreen from '../screens/AuthScreen';
+import AddCanchaScreen from '../screens/AddCanchaScreen';
+import ReviewsListScreen from '../screens/ReviewsListScreen';
+import { useAuth } from '../context/AuthContext';
 import { colors, fontSize, fontWeight } from '../theme';
 import { Ionicons } from '@expo/vector-icons';
 import { createMaterialTopTabNavigator } from '@react-navigation/material-top-tabs';
-import { SafeAreaView } from 'react-native';
+import { SafeAreaView, View, ActivityIndicator } from 'react-native';
 
 // ─── Tab Navigator ────────────────────────────────────────────────────────────
 
@@ -67,17 +71,47 @@ function MainTabs() {
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
 export default function AppNavigator() {
+    const { session, loading } = useAuth();
+
+    if (loading) {
+        return (
+            <View style={{ flex: 1, backgroundColor: colors.background, justifyContent: 'center', alignItems: 'center' }}>
+                <ActivityIndicator size="large" color={colors.primary} />
+            </View>
+        );
+    }
+
     return (
         <NavigationContainer>
             <Stack.Navigator screenOptions={{ headerShown: false }}>
-                <Stack.Screen name="MainTabs" component={MainTabs} />
-                <Stack.Screen
-                    name="CanchaDetail"
-                    component={CanchaDetailScreen}
-                    options={{
-                        animation: 'slide_from_right',
-                    }}
-                />
+                {session ? (
+                    <>
+                        <Stack.Screen name="MainTabs" component={MainTabs} />
+                        <Stack.Screen
+                            name="CanchaDetail"
+                            component={CanchaDetailScreen}
+                            options={{
+                                animation: 'slide_from_right',
+                            }}
+                        />
+                        <Stack.Screen
+                            name="AddCancha"
+                            component={AddCanchaScreen}
+                            options={{
+                                animation: 'fade_from_bottom',
+                            }}
+                        />
+                        <Stack.Screen
+                            name="ReviewsList"
+                            component={ReviewsListScreen}
+                            options={{
+                                animation: 'slide_from_right',
+                            }}
+                        />
+                    </>
+                ) : (
+                    <Stack.Screen name="Auth" component={AuthScreen} options={{ animation: 'fade' }} />
+                )}
             </Stack.Navigator>
         </NavigationContainer>
     );

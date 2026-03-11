@@ -12,7 +12,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../types';
-import { CANCHAS } from '../data/canchas';
+import { useCanchas } from '../context/CanchaContext';
 import { useLocation } from '../hooks/useLocation';
 import { useCanchaFilters } from '../hooks/useCanchaFilters';
 import CanchaCard from '../components/CanchaCard';
@@ -58,6 +58,7 @@ function SortChip({
 export default function SearchScreen({ navigation }: Props) {
     const [modalVisible, setModalVisible] = useState(false);
     const { ubicacion, permisoConcedido, solicitarPermiso } = useLocation();
+    const { canchas, loading } = useCanchas();
     const {
         filtros,
         canchasFiltradas,
@@ -69,7 +70,7 @@ export default function SearchScreen({ navigation }: Props) {
         toggleTecho,
         setOrden,
         limpiarFiltros,
-    } = useCanchaFilters(CANCHAS, ubicacion);
+    } = useCanchaFilters(canchas, ubicacion);
 
     const handleDistanciaSelect = async (dist: any) => {
         if (dist !== null && !permisoConcedido) {

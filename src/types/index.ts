@@ -43,6 +43,19 @@ export interface Cancha {
   totalReviews: number;
 }
 
+export interface Review {
+  id: string;
+  cancha_id: string;
+  user_id: string;
+  rating: number;
+  comentario: string;
+  created_at: string;
+  profiles?: {
+    nombre: string;
+    apellido: string;
+  };
+}
+
 // ─── Filter Types ────────────────────────────────────────────────────────────
 
 export type FiltroDistancia = 5 | 10 | 20 | null;
@@ -62,6 +75,9 @@ export interface FiltrosActivos {
 export type RootStackParamList = {
   MainTabs: undefined;
   CanchaDetail: { canchaId: string };
+  Auth: undefined;
+  AddCancha: { editCanchaId?: string } | undefined;
+  ReviewsList: { canchaId: string };
 };
 
 export type MainTabsParamList = {

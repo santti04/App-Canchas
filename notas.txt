@@ -1,0 +1,5 @@
+el sistema de estrellas no permite poner 5 estrellas;
+hay que poner que las canchas nuevas se registran con 0 calificaciones, 0 estrellas de media;
+hya que poner que el precio sea uno solo, no un rango estimativo
+hay que corregir la funcionalidad del teclado al dejar una reseña;
+optimizar el funcionamiento general

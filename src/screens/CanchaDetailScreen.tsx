@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
     View,
     Text,
@@ -10,15 +10,21 @@ import {
     Platform,
     SafeAreaView,
     Image,
+    Modal,
+    TextInput,
+    ActivityIndicator
 } from 'react-native';
 import ExpoMapView, { Marker, PROVIDER_DEFAULT } from '../components/ExpoMapView';
 import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RouteProp } from '@react-navigation/native';
-import { RootStackParamList } from '../types';
-import { CANCHAS } from '../data/canchas';
+import { RootStackParamList, Review } from '../types';
+import { supabase } from '../lib/supabase';
+import { useCanchas } from '../context/CanchaContext';
+import { useAuth } from '../context/AuthContext';
 import { getCanchaById, formatPrecio } from '../services/canchaService';
 import ServiceTag from '../components/ServiceTag';
+import RatingStars from '../components/RatingStars';
 import { colors, spacing, radius, fontSize, fontWeight, shadow } from '../theme';
 
 type Props = {
@@ -35,7 +41,96 @@ const TAMANO_COLORS: Record<string, string> = {
 
 export default function CanchaDetailScreen({ navigation, route }: Props) {
     const { canchaId } = route.params;
-    const cancha = getCanchaById(CANCHAS, canchaId);
+    const { canchas, refreshCanchas } = useCanchas();
+    const { profile } = useAuth();
+    const cancha = getCanchaById(canchas, canchaId);
+
+    const [reviewsPreview, setReviewsPreview] = useState<Review[]>([]);
+    const [isReviewModalVisible, setIsReviewModalVisible] = useState(false);
+    const [ratingVal, setRatingVal] = useState(5);
+    const [reviewText, setReviewText] = useState('');
+    const [submittingReview, setSubmittingReview] = useState(false);
+    
+    useEffect(() => {
+        if (cancha) {
+            fetchReviewsPreview();
+        }
+    }, [cancha]);
+
+    const fetchReviewsPreview = async () => {
+        try {
+            const { data, error } = await supabase
+                .from('reviews')
+                .select('*, profiles(nombre, apellido)')
+                .eq('cancha_id', canchaId)
+                .order('created_at', { ascending: false })
+                .limit(2);
+                
+            if (!error && data) {
+                setReviewsPreview(data as any);
+            }
+        } catch (err) {
+            console.error('Error fetching preview reviews', err);
+        }
+    };
+
+    const handleDelete = () => {
+        Alert.alert(
+            "Eliminar Cancha",
+            "¿Estás seguro de que querés borrar esta cancha definitivamente?",
+            [
+                { text: "Cancelar", style: "cancel" },
+                { 
+                    text: "Borrar", 
+                    style: "destructive",
+                    onPress: async () => {
+                        try {
+                            const { error } = await supabase.from('canchas').delete().eq('id', canchaId);
+                            if (error) throw error;
+                            await refreshCanchas();
+                            navigation.goBack();
+                        } catch (err: any) {
+                            Alert.alert('Error al borrar', err.message);
+                        }
+                    }
+                }
+            ]
+        );
+    };
+
+    const submitReview = async () => {
+        if (!profile) {
+            Alert.alert("Error", "Debes iniciar sesión para dejar una reseña.");
+            return;
+        }
+        setSubmittingReview(true);
+        try {
+            const { error } = await supabase.from('reviews').insert({
+                cancha_id: canchaId,
+                user_id: profile.id,
+                rating: ratingVal,
+                comentario: reviewText.trim() || null
+            });
+            if (error) {
+                if (error.code === '23505') { // Unique constraint
+                    Alert.alert("Ya calificaste", "Solo podés dejar una reseña por cancha.");
+                } else {
+                    throw error;
+                }
+            } else {
+                Alert.alert("¡Gracias!", "Tu reseña se ha guardado correctamente.");
+                setIsReviewModalVisible(false);
+                setReviewText('');
+                fetchReviewsPreview();
+                refreshCanchas();
+            }
+        } catch (err: any) {
+            Alert.alert("Error", "Hubo un problema al guardar tu reseña.");
+            console.error(err);
+        } finally {
+            setSubmittingReview(false);
+        }
+    };
 
     if (!cancha) {
         return (
@@ -78,12 +173,13 @@ export default function CanchaDetailScreen({ navigation, route }: Props) {
 
     const openGoogleMaps = () => {
         const { lat, lng } = cancha.coordenadas;
-        const label = encodeURIComponent(cancha.nombre);
-        const url = Platform.OS === 'ios'
-            ? `maps:${lat},${lng}?q=${label}`
-            : `geo:${lat},${lng}?q=${lat},${lng}(${label})`;
+        // Obliga explícitamente a buscar solo por coordenadas, sin textos que puedan confundir al buscador del GPS.
+        const url = Platform.OS === 'ios' 
+            ? `maps:0,0?q=${lat},${lng}` 
+            : `geo:0,0?q=${lat},${lng}`;
+            
         Linking.openURL(url).catch(() => {
-            Linking.openURL(`https://maps.google.com/?q=${lat},${lng}`);
+            Linking.openURL(`https://www.google.com/maps/search/?api=1&query=${lat},${lng}`);
         });
     };
 
@@ -99,7 +195,26 @@ export default function CanchaDetailScreen({ navigation, route }: Props) {
                     <Ionicons name="arrow-back" size={22} color={colors.textPrimary} />
                 </TouchableOpacity>
                 <Text style={styles.navTitle} numberOfLines={1}>{cancha.nombre}</Text>
-                <View style={{ width: 38 }} />
+                {profile?.is_admin ? (
+                    <View style={{ flexDirection: 'row', gap: spacing.xs }}>
+                        <TouchableOpacity
+                            style={[styles.actionBtn, { borderColor: colors.error + '44', backgroundColor: colors.error + '22' }]}
+                            onPress={handleDelete}
+                            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                        >
+                            <Ionicons name="trash-outline" size={20} color={colors.error} />
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                            style={styles.actionBtn}
+                            onPress={() => navigation.navigate('AddCancha', { editCanchaId: cancha.id })}
+                            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                        >
+                            <Ionicons name="pencil-outline" size={20} color={colors.primary} />
+                        </TouchableOpacity>
+                    </View>
+                ) : (
+                    <View style={{ width: 38 }} />
+                )}
             </View>
 
             <ScrollView style={styles.scroll} showsVerticalScrollIndicator={false}>
@@ -129,13 +244,6 @@ export default function CanchaDetailScreen({ navigation, route }: Props) {
 
                     {/* Description */}
                     <Text style={styles.descripcion}>{cancha.descripcion}</Text>
-
-                    {/* Address */}
-                    <TouchableOpacity style={styles.addressRow} onPress={openGoogleMaps}>
-                        <Ionicons name="location" size={18} color={colors.primary} />
-                        <Text style={styles.addressText}>{cancha.direccion}</Text>
-                        <Ionicons name="open-outline" size={14} color={colors.textSecondary} />
-                    </TouchableOpacity>
 
                     {/* Price */}
                     <View style={[styles.priceCard, shadow.sm]}>
@@ -205,7 +313,7 @@ export default function CanchaDetailScreen({ navigation, route }: Props) {
 
                     {/* ─── Map ─────────────────────────────────────────────────── */}
                     <Text style={styles.sectionTitle}>Ubicación</Text>
-                    <TouchableOpacity onPress={openGoogleMaps} activeOpacity={0.9}>
+                    <TouchableOpacity onPress={openGoogleMaps} activeOpacity={0.9} style={styles.mapContainer}>
                         <ExpoMapView
                             style={styles.map}
                             provider={PROVIDER_DEFAULT}
@@ -225,15 +333,61 @@ export default function CanchaDetailScreen({ navigation, route }: Props) {
                                     latitude: cancha.coordenadas.lat,
                                     longitude: cancha.coordenadas.lng,
                                 }}
-                                title={cancha.nombre}
-                                description={cancha.direccion}
                             />
                         </ExpoMapView>
+                        
+                        {/* Overlay superior con la dirección */}
+                        <View style={styles.mapOverlayTop}>
+                            <Ionicons name="location" size={16} color={colors.primary} />
+                            <Text style={styles.mapAddressText} numberOfLines={2}>{cancha.direccion}</Text>
+                        </View>
+
+                        {/* Overlay inferior con el botón */}
                         <View style={styles.mapOverlayBtn}>
                             <Ionicons name="map-outline" size={14} color={colors.white} />
-                            <Text style={styles.mapOverlayText}>Ver en Google Maps</Text>
+                            <Text style={styles.mapOverlayText}>Abrir en Maps</Text>
                         </View>
                     </TouchableOpacity>
+
+                    {/* ─── Reviews ──────────────────────────────────────────────────────── */}
+                    <View style={styles.reviewsSectionWrap}>
+                        <View style={styles.reviewsHeader}>
+                            <Text style={styles.sectionTitle}>Reseñas</Text>
+                            <TouchableOpacity onPress={() => navigation.navigate('ReviewsList', { canchaId })}>
+                                <Text style={styles.verMasLink}>Mostrar más ({cancha.totalReviews})</Text>
+                            </TouchableOpacity>
+                        </View>
+                        
+                        {reviewsPreview.length === 0 ? (
+                            <Text style={styles.noReviewsText}>Todavía no hay reseñas. ¡Sé el primero en calificar!</Text>
+                        ) : (
+                            <View style={styles.reviewsPreviewList}>
+                                {reviewsPreview.map(rev => (
+                                    <View key={rev.id} style={styles.reviewCardPreview}>
+                                        <View style={styles.reviewCardHeader}>
+                                            <Text style={styles.reviewUserName}>
+                                                {rev.profiles?.nombre} {rev.profiles?.apellido}
+                                            </Text>
+                                            <RatingStars rating={rev.rating} size={14} />
+                                        </View>
+                                        {rev.comentario ? <Text style={styles.reviewTextPreview} numberOfLines={2}>{rev.comentario}</Text> : null}
+                                    </View>
+                                ))}
+                            </View>
+                        )}
+                        
+                        {profile ? (
+                            <TouchableOpacity 
+                                style={styles.addReviewBtnInline} 
+                                onPress={() => setIsReviewModalVisible(true)}
+                            >
+                                <Ionicons name="star-outline" size={18} color={colors.primary} />
+                                <Text style={styles.addReviewBtnTextInline}>Dejar una reseña</Text>
+                            </TouchableOpacity>
+                        ) : (
+                            <Text style={styles.loginToReviewText}>Iniciá sesión para calificar esta cancha.</Text>
+                        )}
+                    </View>
 
                     {/* ─── Contact Buttons ──────────────────────────────────────── */}
                     <Text style={styles.sectionTitle}>Contactar</Text>
@@ -279,6 +433,56 @@ export default function CanchaDetailScreen({ navigation, route }: Props) {
                     <View style={{ height: spacing.xxl }} />
                 </View>
             </ScrollView>
+
+            {/* Modal de Calificación */}
+            <Modal
+                transparent
+                visible={isReviewModalVisible}
+                animationType="fade"
+                onRequestClose={() => setIsReviewModalVisible(false)}
+            >
+                <View style={styles.modalOverlay}>
+                    <View style={styles.modalContent}>
+                        <View style={styles.modalHeader}>
+                            <Text style={styles.modalTitle}>Calificá tu experiencia</Text>
+                            <TouchableOpacity onPress={() => setIsReviewModalVisible(false)}>
+                                <Ionicons name="close" size={24} color={colors.textSecondary} />
+                            </TouchableOpacity>
+                        </View>
+                        
+                        <View style={styles.modalStarsWrap}>
+                            <RatingStars 
+                                rating={ratingVal} 
+                                size={40} 
+                                readonly={false} 
+                                onRatingChange={setRatingVal} 
+                            />
+                            <Text style={styles.modalRatingText}>{ratingVal.toFixed(1)} / 5.0</Text>
+                        </View>
+                        
+                        <TextInput
+                            style={styles.modalInput}
+                            placeholder="Escribí un breve comentario sobre la cancha... (Opcional)"
+                            placeholderTextColor={colors.textMuted}
+                            value={reviewText}
+                            onChangeText={setReviewText}
+                            multiline
+                        />
+                        
+                        <TouchableOpacity 
+                            style={styles.modalSubmitBtn} 
+                            onPress={submitReview}
+                            disabled={submittingReview}
+                        >
+                            {submittingReview ? (
+                                <ActivityIndicator color={colors.black} />
+                            ) : (
+                                <Text style={styles.modalSubmitBtnText}>Guardar Reseña</Text>
+                            )}
+                        </TouchableOpacity>
+                    </View>
+                </View>
+            </Modal>
         </SafeAreaView>
     );
 }
@@ -371,6 +575,16 @@ const styles = StyleSheet.create({
         borderRadius: radius.md,
         backgroundColor: colors.surfaceElevated,
     },
+    actionBtn: {
+        width: 38,
+        height: 38,
+        alignItems: 'center',
+        justifyContent: 'center',
+        borderRadius: radius.md,
+        backgroundColor: colors.primary + '22',
+        borderWidth: 1,
+        borderColor: colors.primary + '44',
+    },
     navTitle: {
         flex: 1,
         fontSize: fontSize.md,
@@ -430,22 +644,6 @@ const styles = StyleSheet.create({
         lineHeight: 22,
         marginBottom: spacing.md,
     },
-    addressRow: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: spacing.xs,
-        backgroundColor: colors.surfaceElevated,
-        padding: spacing.md,
-        borderRadius: radius.lg,
-        marginBottom: spacing.md,
-        borderWidth: 1,
-        borderColor: colors.border,
-    },
-    addressText: {
-        flex: 1,
-        fontSize: fontSize.sm,
-        color: colors.textPrimary,
-    },
     priceCard: {
         flexDirection: 'row',
         justifyContent: 'space-between',
@@ -491,28 +689,55 @@ const styles = StyleSheet.create({
         flexWrap: 'wrap',
         marginBottom: spacing.lg,
     },
-    map: {
-        height: 200,
+    mapContainer: {
         borderRadius: radius.lg,
         overflow: 'hidden',
         marginBottom: spacing.lg,
         borderWidth: 1,
         borderColor: colors.border,
+        backgroundColor: colors.card,
+    },
+    map: {
+        height: 200,
+        width: '100%',
+    },
+    mapOverlayTop: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: spacing.xs,
+        position: 'absolute',
+        top: spacing.sm,
+        left: spacing.sm,
+        right: spacing.sm,
+        backgroundColor: colors.surfaceElevated,
+        paddingHorizontal: spacing.sm,
+        paddingVertical: spacing.xs,
+        borderRadius: radius.full,
+        borderWidth: 1,
+        borderColor: colors.border,
+        ...shadow.sm,
+    },
+    mapAddressText: {
+        flex: 1,
+        fontSize: fontSize.xs,
+        fontWeight: fontWeight.bold,
+        color: colors.textPrimary,
     },
     mapOverlayBtn: {
         flexDirection: 'row',
         alignItems: 'center',
         gap: 5,
         position: 'absolute',
-        bottom: spacing.lg + spacing.sm,
-        right: spacing.md,
-        backgroundColor: 'rgba(0,0,0,0.65)',
+        bottom: spacing.sm,
+        right: spacing.sm,
+        backgroundColor: 'rgba(0,0,0,0.7)',
         paddingHorizontal: spacing.sm,
-        paddingVertical: 4,
+        paddingVertical: 6,
         borderRadius: radius.full,
     },
     mapOverlayText: {
         fontSize: fontSize.xs,
+        fontWeight: fontWeight.bold,
         color: colors.white,
     },
     contactDesc: {
@@ -564,4 +789,128 @@ const styles = StyleSheet.create({
         color: colors.primary,
         fontSize: fontSize.md,
     },
+    reviewsSectionWrap: {
+        marginTop: spacing.md,
+        marginBottom: spacing.md,
+    },
+    reviewsHeader: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+    },
+    verMasLink: {
+        color: colors.primary,
+        fontWeight: fontWeight.bold,
+        fontSize: fontSize.sm,
+    },
+    noReviewsText: {
+        fontSize: fontSize.sm,
+        color: colors.textSecondary,
+        fontStyle: 'italic',
+        marginBottom: spacing.md,
+    },
+    reviewsPreviewList: {
+        gap: spacing.sm,
+        marginBottom: spacing.md,
+    },
+    reviewCardPreview: {
+        backgroundColor: colors.surfaceElevated,
+        padding: spacing.md,
+        borderRadius: radius.md,
+        borderWidth: 1,
+        borderColor: colors.border,
+    },
+    reviewCardHeader: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: 4,
+    },
+    reviewUserName: {
+        fontWeight: fontWeight.bold,
+        fontSize: fontSize.sm,
+        color: colors.textPrimary,
+    },
+    reviewTextPreview: {
+        fontSize: fontSize.sm,
+        color: colors.textSecondary,
+        marginTop: 4,
+    },
+    addReviewBtnInline: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: spacing.xs,
+        paddingVertical: spacing.sm,
+        borderWidth: 1,
+        borderColor: colors.primary + '88',
+        borderRadius: radius.md,
+        backgroundColor: colors.primary + '11',
+    },
+    addReviewBtnTextInline: {
+        color: colors.primary,
+        fontWeight: fontWeight.bold,
+        fontSize: fontSize.sm,
+    },
+    loginToReviewText: {
+        color: colors.textSecondary,
+        fontSize: fontSize.sm,
+        textAlign: 'center',
+        marginTop: spacing.sm,
+    },
+    modalOverlay: {
+        flex: 1,
+        backgroundColor: 'rgba(0,0,0,0.5)',
+        justifyContent: 'flex-end',
+    },
+    modalContent: {
+        backgroundColor: colors.surface,
+        borderTopLeftRadius: radius.xl,
+        borderTopRightRadius: radius.xl,
+        padding: spacing.lg,
+        paddingBottom: Platform.OS === 'ios' ? spacing.xxl : spacing.lg,
+    },
+    modalHeader: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: spacing.lg,
+    },
+    modalTitle: {
+        fontSize: fontSize.lg,
+        fontWeight: fontWeight.bold,
+        color: colors.textPrimary,
+    },
+    modalStarsWrap: {
+        alignItems: 'center',
+        marginBottom: spacing.lg,
+    },
+    modalRatingText: {
+        marginTop: spacing.sm,
+        fontSize: fontSize.md,
+        fontWeight: fontWeight.bold,
+        color: colors.primary,
+    },
+    modalInput: {
+        backgroundColor: colors.surfaceElevated,
+        borderWidth: 1,
+        borderColor: colors.border,
+        borderRadius: radius.md,
+        padding: spacing.md,
+        height: 100,
+        textAlignVertical: 'top',
+        color: colors.textPrimary,
+        marginBottom: spacing.lg,
+    },
+    modalSubmitBtn: {
+        backgroundColor: colors.primary,
+        paddingVertical: spacing.md,
+        borderRadius: radius.md,
+        alignItems: 'center',
+    },
+    modalSubmitBtnText: {
+        color: colors.black,
+        fontWeight: fontWeight.bold,
+        fontSize: fontSize.md,
+    }
 });

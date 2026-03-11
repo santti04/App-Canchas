@@ -12,26 +12,30 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../types';
-import { CANCHAS } from '../data/canchas';
+import { useCanchas } from '../context/CanchaContext';
 import { CIUDAD_DEFAULT } from '../data/constants';
 import { getCanchasDestacadas } from '../services/canchaService';
 import CanchaCard from '../components/CanchaCard';
 import { useLocation } from '../hooks/useLocation';
+import { useAuth } from '../context/AuthContext';
+import { supabase } from '../lib/supabase';
 import { colors, spacing, radius, fontSize, fontWeight, shadow } from '../theme';
 
 type Props = {
     navigation: NativeStackNavigationProp<RootStackParamList>;
 };
 
-const STATS = [
-    { label: 'Canchas', value: `${CANCHAS.length}`, icon: 'football-outline' },
+const getStats = (totalCanchas: number) => [
+    { label: 'Canchas', value: `${totalCanchas}`, icon: 'football-outline' },
     { label: 'F5/F7/F9/F11', value: '4 tipos', icon: 'resize-outline' },
     { label: 'Césped', value: 'Natural y Sint.', icon: 'leaf-outline' },
 ];
 
 export default function HomeScreen({ navigation }: Props) {
     const { ubicacion } = useLocation();
-    const destacadas = getCanchasDestacadas(CANCHAS, 5);
+    const { canchas, loading } = useCanchas();
+    const { profile } = useAuth();
+    const destacadas = getCanchasDestacadas(canchas, 5);
 
     const goToSearch = () => navigation.navigate('MainTabs', { screen: 'Buscar' } as any);
 
@@ -44,12 +48,19 @@ export default function HomeScreen({ navigation }: Props) {
                 <View style={styles.header}>
                     <View style={styles.headerTop}>
                         <View>
-                            <Text style={styles.headerSubtitle}>Bienvenido a</Text>
+                            <Text style={styles.headerSubtitle}>
+                                {profile ? `¡Hola, ${profile.nombre}!` : 'Bienvenido a'}
+                            </Text>
                             <Text style={styles.headerTitle}>⚽ AppCanchas</Text>
                         </View>
-                        <View style={styles.ciudadBadge}>
-                            <Ionicons name="location" size={12} color={colors.primary} />
-                            <Text style={styles.ciudadText}>{CIUDAD_DEFAULT.nombre}</Text>
+                        <View style={styles.headerActions}>
+                            <View style={styles.ciudadBadge}>
+                                <Ionicons name="location" size={12} color={colors.primary} />
+                                <Text style={styles.ciudadText}>{CIUDAD_DEFAULT.nombre}</Text>
+                            </View>
+                            <TouchableOpacity onPress={() => supabase.auth.signOut()} style={{ marginLeft: spacing.sm }}>
+                                <Ionicons name="log-out-outline" size={24} color={colors.textSecondary} />
+                            </TouchableOpacity>
                         </View>
                     </View>
 
@@ -69,7 +80,7 @@ export default function HomeScreen({ navigation }: Props) {
 
                 {/* ─── Stats ───────────────────────────────────────────────────── */}
                 <View style={styles.statsRow}>
-                    {STATS.map((s, i) => (
+                    {getStats(canchas.length).map((s, i) => (
                         <View key={i} style={[styles.statCard, shadow.sm]}>
                             <Ionicons name={s.icon as any} size={22} color={colors.primary} />
                             <Text style={styles.statValue}>{s.value}</Text>
@@ -108,6 +119,17 @@ export default function HomeScreen({ navigation }: Props) {
 
                 <View style={{ height: spacing.xl }} />
             </ScrollView>
+
+            {/* Solo los administradores pueden ver el botón de agregar canchas */}
+            {profile?.is_admin === true && (
+                <TouchableOpacity 
+                    style={styles.fabBtn} 
+                    activeOpacity={0.8}
+                    onPress={() => navigation.navigate('AddCancha')}
+                >
+                    <Ionicons name="add" size={28} color={colors.black} />
+                </TouchableOpacity>
+            )}
         </SafeAreaView>
     );
 }
@@ -142,6 +164,10 @@ const styles = StyleSheet.create({
         fontSize: fontSize.xxl,
         fontWeight: fontWeight.extrabold,
         color: colors.textPrimary,
+    },
+    headerActions: {
+        flexDirection: 'row',
+        alignItems: 'center',
     },
     ciudadBadge: {
         flexDirection: 'row',
@@ -269,5 +295,17 @@ const styles = StyleSheet.create({
         fontSize: fontSize.sm,
         color: colors.textSecondary,
         lineHeight: 20,
+    },
+    fabBtn: {
+        position: 'absolute',
+        bottom: spacing.lg,
+        right: spacing.lg,
+        width: 60,
+        height: 60,
+        borderRadius: 30,
+        backgroundColor: colors.primary,
+        justifyContent: 'center',
+        alignItems: 'center',
+        ...shadow.lg,
     },
 });
