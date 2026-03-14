@@ -1,40 +1,45 @@
-// ─── App Theme ───────────────────────────────────────────────────────────────
+// ─── App Theme: Fútbol Pro ───────────────────────────────────────────────────────
 
 export const colors = {
-    // Primary brand
-    primary: '#00C851',
-    primaryDark: '#007E33',
-    primaryLight: '#69F0AE',
+    // Fondos
+    background: '#0A1F0A',      // Verde muy oscuro
+    navigation: '#0D1A0D',       // Fondo de navegación
+    surface: '#132414',         // Cards, headers
+    surfaceElevated: '#1A3320', // Elementos destacados
+    card: '#132414',            // Cards (same as surface)
 
-    // Secondary accent
-    accent: '#1B5E20',
-    accentLight: '#2E7D32',
+    // Primario (campo de fútbol)
+    primary: '#2ECC71',         // Verde brillante
+    primaryDark: '#27AE60',     // Presionado
+    primaryLight: '#58D68D',    // Claro
 
-    // Backgrounds
-    background: '#0D1117',
-    surface: '#161B22',
-    surfaceElevated: '#21262D',
-    card: '#1C2128',
+    // Acentos
+    accent: '#1A3320',
+    accentLight: '#2D5A3D',     // Acento claro
+    gold: '#F1C40F',            // Estrellas rating
+    orange: '#E67E22',          // CTAs secundarios
 
-    // Text
-    textPrimary: '#E6EDF3',
-    textSecondary: '#8B949E',
-    textMuted: '#484F58',
+    // Texto
+    textPrimary: '#FFFFFF',
+    textSecondary: '#A8D5A2',
+    textMuted: '#4A7A54',
 
-    // Status
-    success: '#00C851',
-    warning: '#FFA500',
-    error: '#FF4444',
-    info: '#2196F3',
+    // Estados
+    success: '#2ECC71',
+    warning: '#F39C12',
+    error: '#E74C3C',
+    info: '#3498DB',
+
+    // Bordes
+    border: '#2D5A3D',
+    divider: '#2D5A3D',
 
     // Misc
-    border: '#30363D',
-    divider: '#21262D',
     overlay: 'rgba(0, 0, 0, 0.6)',
     white: '#FFFFFF',
     black: '#000000',
 
-    // Cancha type tags
+    // Tags de tipo de cancha
     tagF5: '#1565C0',
     tagF7: '#6A1B9A',
     tagF9: '#E65100',
@@ -55,7 +60,7 @@ export const spacing = {
 export const radius = {
     sm: 6,
     md: 12,
-    lg: 18,
+    lg: 16,
     xl: 24,
     full: 999,
 };
@@ -81,22 +86,22 @@ export const fontWeight = {
 export const shadow = {
     sm: {
         shadowColor: '#000',
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.3,
-        shadowRadius: 2,
-        elevation: 2,
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.25,
+        shadowRadius: 4,
+        elevation: 3,
     },
     md: {
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.4,
+        shadowOpacity: 0.3,
         shadowRadius: 6,
         elevation: 5,
     },
     lg: {
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 8 },
-        shadowOpacity: 0.5,
+        shadowOpacity: 0.4,
         shadowRadius: 12,
         elevation: 10,
     },
