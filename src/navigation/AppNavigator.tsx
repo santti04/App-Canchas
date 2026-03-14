@@ -1,7 +1,8 @@
 import React from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import { RootStackParamList, MainTabsParamList } from '../types';
+import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import { RootStackParamList } from '../types';
 import HomeScreen from '../screens/HomeScreen';
 import SearchScreen from '../screens/SearchScreen';
 import FavoritosScreen from '../screens/FavoritosScreen';
@@ -9,60 +10,73 @@ import CanchaDetailScreen from '../screens/CanchaDetailScreen';
 import AuthScreen from '../screens/AuthScreen';
 import AddCanchaScreen from '../screens/AddCanchaScreen';
 import ReviewsListScreen from '../screens/ReviewsListScreen';
+import PerfilScreen from '../screens/PerfilScreen';
 import { useAuth } from '../context/AuthContext';
 import { colors, fontSize, fontWeight } from '../theme';
 import { Ionicons } from '@expo/vector-icons';
-import { createMaterialTopTabNavigator } from '@react-navigation/material-top-tabs';
-import { SafeAreaView, View, ActivityIndicator } from 'react-native';
+import { View, ActivityIndicator } from 'react-native';
 
-// ─── Tab Navigator ────────────────────────────────────────────────────────────
+// ─── Bottom Tab Navigator ───────────────────────────────────────────────────────────
 
-const Tab = createMaterialTopTabNavigator<MainTabsParamList>();
+const Tab = createBottomTabNavigator();
 
 function MainTabs() {
     return (
-        <SafeAreaView style={{ flex: 1, backgroundColor: colors.surface }}>
-            <Tab.Navigator
-                screenOptions={({ route }: { route: any }) => ({
-                    tabBarActiveTintColor: colors.primary,
-                    tabBarInactiveTintColor: colors.textSecondary,
-                    tabBarStyle: {
-                        backgroundColor: '#050709',
-                        borderBottomWidth: 1,
-                        borderBottomColor: colors.border,
-                        elevation: 0,
-                        shadowOpacity: 0,
-                    },
-                    tabBarIndicatorStyle: {
-                        backgroundColor: colors.primary,
-                        height: 3,
-                    },
-                    tabBarLabelStyle: {
-                        fontSize: fontSize.xs,
-                        fontWeight: fontWeight.bold,
-                        textTransform: 'uppercase',
-                    },
-                    tabBarShowIcon: true,
-                    tabBarIcon: ({ focused, color }: { focused: boolean; color: string }) => {
-                        let iconName: keyof typeof Ionicons.glyphMap = 'home-outline';
+        <Tab.Navigator
+            screenOptions={({ route }) => ({
+                tabBarIcon: ({ focused, color, size }) => {
+                    let iconName: keyof typeof Ionicons.glyphMap = 'home-outline';
 
-                        if (route.name === 'Home') {
-                            iconName = focused ? 'home' : 'home-outline';
-                        } else if (route.name === 'Buscar') {
-                            iconName = focused ? 'search' : 'search-outline';
-                        } else if (route.name === 'Favoritos') {
-                            iconName = focused ? 'heart' : 'heart-outline';
-                        }
+                    if (route.name === 'HomeTab') {
+                        iconName = focused ? 'home' : 'home-outline';
+                    } else if (route.name === 'BuscarTab') {
+                        iconName = focused ? 'search' : 'search-outline';
+                    } else if (route.name === 'FavoritosTab') {
+                        iconName = focused ? 'heart' : 'heart-outline';
+                    } else if (route.name === 'PerfilTab') {
+                        iconName = focused ? 'person' : 'person-outline';
+                    }
 
-                        return <Ionicons name={iconName} size={18} color={color} />;
-                    },
-                })}
-            >
-                <Tab.Screen name="Home" component={HomeScreen} options={{ tabBarLabel: 'Inicio' }} />
-                <Tab.Screen name="Buscar" component={SearchScreen} options={{ tabBarLabel: 'Buscar' }} />
-                <Tab.Screen name="Favoritos" component={FavoritosScreen} options={{ tabBarLabel: 'Favoritos' }} />
-            </Tab.Navigator>
-        </SafeAreaView>
+                    return <Ionicons name={iconName} size={size} color={color} />;
+                },
+                tabBarActiveTintColor: colors.primary,
+                tabBarInactiveTintColor: colors.textSecondary,
+                tabBarStyle: {
+                    backgroundColor: colors.navigation,
+                    borderTopColor: colors.border,
+                    borderTopWidth: 1,
+                    height: 60,
+                    paddingBottom: 8,
+                    paddingTop: 8,
+                },
+                tabBarLabelStyle: {
+                    fontSize: fontSize.xs,
+                    fontWeight: fontWeight.medium,
+                },
+                headerShown: false,
+            })}
+        >
+            <Tab.Screen
+                name="HomeTab"
+                component={HomeScreen}
+                options={{ tabBarLabel: 'Inicio' }}
+            />
+            <Tab.Screen
+                name="BuscarTab"
+                component={SearchScreen}
+                options={{ tabBarLabel: 'Buscar' }}
+            />
+            <Tab.Screen
+                name="FavoritosTab"
+                component={FavoritosScreen}
+                options={{ tabBarLabel: 'Favoritos' }}
+            />
+            <Tab.Screen
+                name="PerfilTab"
+                component={PerfilScreen}
+                options={{ tabBarLabel: 'Perfil' }}
+            />
+        </Tab.Navigator>
     );
 }
 

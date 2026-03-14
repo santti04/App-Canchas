@@ -81,9 +81,10 @@ export type RootStackParamList = {
 };
 
 export type MainTabsParamList = {
-  Home: undefined;
-  Buscar: undefined;
-  Favoritos: undefined;
+  HomeTab: undefined;
+  BuscarTab: undefined;
+  FavoritosTab: undefined;
+  PerfilTab: undefined;
 };
 
 // ─── Location Types ──────────────────────────────────────────────────────────
